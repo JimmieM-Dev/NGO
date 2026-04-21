@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+ngo.db
+
+# Node / Expo
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Env files
+.env
+.env.local
