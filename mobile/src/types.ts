@@ -12,8 +12,8 @@ export type Registration = {
   full_name: string;
   national_id: string;
   phone: string;
-  fingerprint_sha256: string;
-  fingerprint_dhash: string;
+  face_sha256: string;
+  face_dhash: string;
   is_duplicate: boolean;
   duplicate_reason: string | null;
   duplicate_of_id: string | null;
@@ -42,5 +42,5 @@ export type RegistrationDraft = {
   full_name: string;
   national_id: string;
   phone: string;
-  fingerprint_image_b64: string;
+  face_image_b64: string;
 };

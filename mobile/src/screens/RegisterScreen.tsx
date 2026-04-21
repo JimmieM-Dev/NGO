@@ -13,10 +13,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../api';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { colors, sharedStyles, spacing } from '../theme';
-import type { RegistrationCreateResponse, RegistrationDraft } from '../types';
+import type { Registration, RegistrationDraft } from '../types';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
+
+type RegisterState =
+  | { kind: 'idle' }
+  | { kind: 'success'; registration: Registration }
+  | { kind: 'refused'; reason: string };
 
 export function RegisterScreen({ navigation, route }: Props) {
   const { eventId, eventName } = route.params;
@@ -24,15 +29,15 @@ export function RegisterScreen({ navigation, route }: Props) {
   const [fullName, setFullName] = useState('');
   const [nationalId, setNationalId] = useState('');
   const [phone, setPhone] = useState('');
-  const [fingerprintB64, setFingerprintB64] = useState<string | null>(null);
+  const [faceB64, setFaceB64] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<RegistrationCreateResponse | null>(null);
+  const [result, setResult] = useState<RegisterState>({ kind: 'idle' });
 
-  const captureFingerprint = () => {
-    navigation.navigate('CaptureFingerprint', {
+  const captureFace = () => {
+    navigation.navigate('CaptureFace', {
       onCaptured: (b64) => {
-        setFingerprintB64(b64);
-        setResult(null);
+        setFaceB64(b64);
+        setResult({ kind: 'idle' });
       },
     });
   };
@@ -42,24 +47,28 @@ export function RegisterScreen({ navigation, route }: Props) {
       Alert.alert('Missing info', 'Full name, national ID, and phone are required.');
       return;
     }
-    if (!fingerprintB64) {
-      Alert.alert('Missing fingerprint', 'Capture the attendee\'s fingerprint first.');
+    if (!faceB64) {
+      Alert.alert('Missing face capture', "Capture the attendee's face first.");
       return;
     }
     setSubmitting(true);
-    setResult(null);
+    setResult({ kind: 'idle' });
     try {
       const draft: RegistrationDraft = {
         full_name: fullName.trim(),
         national_id: nationalId.trim(),
         phone: phone.trim(),
-        fingerprint_image_b64: fingerprintB64,
+        face_image_b64: faceB64,
       };
       const res = await api.createRegistration(eventId, draft);
-      setResult(res);
+      setResult({ kind: 'success', registration: res.registration });
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : 'Failed to register attendee';
-      Alert.alert('Error', msg);
+      if (e instanceof ApiError && e.status === 409) {
+        setResult({ kind: 'refused', reason: e.message });
+      } else {
+        const msg = e instanceof ApiError ? e.message : 'Failed to register attendee';
+        Alert.alert('Error', msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -69,8 +78,12 @@ export function RegisterScreen({ navigation, route }: Props) {
     setFullName('');
     setNationalId('');
     setPhone('');
-    setFingerprintB64(null);
-    setResult(null);
+    setFaceB64(null);
+    setResult({ kind: 'idle' });
+  };
+
+  const clearOutcomeAndKeep = () => {
+    setResult({ kind: 'idle' });
   };
 
   return (
@@ -117,51 +130,56 @@ export function RegisterScreen({ navigation, route }: Props) {
         </View>
 
         <View>
-          <Text style={sharedStyles.label}>Fingerprint</Text>
-          {fingerprintB64 ? (
+          <Text style={sharedStyles.label}>Face capture</Text>
+          {faceB64 ? (
             <View style={styles.preview}>
               <Image
-                source={{ uri: `data:image/jpeg;base64,${fingerprintB64}` }}
+                source={{ uri: `data:image/jpeg;base64,${faceB64}` }}
                 style={styles.previewImage}
                 resizeMode="cover"
               />
               <PrimaryButton
                 title="Recapture"
                 variant="secondary"
-                onPress={captureFingerprint}
+                onPress={captureFace}
               />
             </View>
           ) : (
-            <PrimaryButton title="Capture fingerprint" onPress={captureFingerprint} />
+            <PrimaryButton title="Capture face" onPress={captureFace} />
           )}
         </View>
 
         <PrimaryButton title="Submit registration" onPress={submit} loading={submitting} />
       </View>
 
-      {result ? (
-        <View
-          style={[
-            sharedStyles.card,
-            { borderColor: result.duplicate ? colors.danger : colors.success },
-          ]}
-        >
-          <Text
-            style={[
-              sharedStyles.heading,
-              { color: result.duplicate ? colors.danger : colors.success },
-            ]}
-          >
-            {result.duplicate ? 'Duplicate detected' : 'Registered successfully'}
+      {result.kind === 'success' ? (
+        <View style={[sharedStyles.card, { borderColor: colors.success }]}>
+          <Text style={[sharedStyles.heading, { color: colors.success }]}>
+            Registered successfully
           </Text>
-          {result.duplicate ? (
-            <Text style={sharedStyles.subheading}>{result.duplicate.reason}</Text>
-          ) : (
-            <Text style={sharedStyles.subheading}>
-              Attendee {result.registration.full_name} is now registered.
-            </Text>
-          )}
+          <Text style={sharedStyles.subheading}>
+            Attendee {result.registration.full_name} is now registered.
+          </Text>
           <PrimaryButton title="Register another" onPress={registerAnother} />
+        </View>
+      ) : null}
+
+      {result.kind === 'refused' ? (
+        <View style={[sharedStyles.card, { borderColor: colors.danger }]}>
+          <Text style={[sharedStyles.heading, { color: colors.danger }]}>
+            Registration refused
+          </Text>
+          <Text style={sharedStyles.subheading}>{result.reason}</Text>
+          <Text style={sharedStyles.subheading}>
+            This person is already registered for this event and cannot be registered
+            a second time.
+          </Text>
+          <PrimaryButton
+            title="Edit details and retry"
+            variant="secondary"
+            onPress={clearOutcomeAndKeep}
+          />
+          <PrimaryButton title="Register a different person" onPress={registerAnother} />
         </View>
       ) : null}
     </ScrollView>

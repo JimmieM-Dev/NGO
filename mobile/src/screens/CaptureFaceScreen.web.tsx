@@ -7,14 +7,14 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { colors, sharedStyles, spacing } from '../theme';
 import type { RootStackParamList } from '../navigation';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CaptureFingerprint'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'CaptureFace'>;
 
 function extractBase64(dataUrl: string): string {
   const comma = dataUrl.indexOf(',');
   return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
 }
 
-export function CaptureFingerprintScreen({ navigation, route }: Props) {
+export function CaptureFaceScreen({ navigation, route }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [previewB64, setPreviewB64] = useState<string | null>(null);
   const [previewMime, setPreviewMime] = useState<string>('image/jpeg');
@@ -62,12 +62,12 @@ export function CaptureFingerprintScreen({ navigation, route }: Props) {
     <View style={sharedStyles.screen}>
       <View style={sharedStyles.content}>
         <View style={sharedStyles.card}>
-          <Text style={sharedStyles.heading}>Capture fingerprint</Text>
+          <Text style={sharedStyles.heading}>Capture face</Text>
           <Text style={sharedStyles.subheading}>
-            On a phone or tablet this opens the rear camera so the operator can
-            photograph the attendee&apos;s index finger. On desktop it opens a
-            file picker so you can upload a test image and exercise the
-            deduplication flow.
+            On a phone or tablet this opens the front camera so the operator can
+            photograph the attendee&apos;s face. On desktop it opens a file
+            picker so you can upload a test image and exercise the deduplication
+            flow.
           </Text>
 
           {previewB64 ? (
@@ -89,12 +89,13 @@ export function CaptureFingerprintScreen({ navigation, route }: Props) {
       </View>
 
       {/* Hidden DOM input — required because expo-camera's web preview is
-          unreliable in deployed builds. */}
+          unreliable in deployed builds. `capture="user"` hints to mobile
+          browsers to open the selfie camera. */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        capture="user"
         style={{ display: 'none' }}
         onChange={onFile}
       />

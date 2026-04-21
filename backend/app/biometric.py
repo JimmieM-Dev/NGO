@@ -1,20 +1,19 @@
 """Biometric template helpers.
 
-For each registration the system derives two values from the captured fingerprint image:
+For each registration the system derives two values from the captured face image:
 
-- ``fingerprint_sha256``: SHA-256 of the raw captured bytes. Exact-match dedup.
-- ``fingerprint_dhash``: An 8x8 difference hash (64 bits, 16 hex chars). Fuzzy dedup via
-  Hamming distance, which tolerates minor variation introduced by a re-capture of the same
-  finger.
+- ``face_sha256``: SHA-256 of the raw captured bytes. Exact-match dedup.
+- ``face_dhash``: An 8x8 difference hash (64 bits, 16 hex chars). Fuzzy dedup via
+  Hamming distance, which tolerates minor variation introduced by a re-capture of the
+  same person.
 
 These values can be computed client-side by the mobile app (fast, works offline) OR
 server-side from an uploaded base64 image (simpler clients). This module contains the
 server-side reference implementation.
 
-For production deployments, swap this pipeline for a real fingerprint SDK (e.g. SourceAFIS,
-Innovatrics, Neurotechnology, NIST NBIS) that extracts minutiae templates, and replace
-``hamming_distance_hex`` with the SDK's matcher. The rest of the flow (storage, dedup,
-reporting) is unchanged.
+For production deployments, swap this pipeline for a real face-recognition SDK (e.g.
+FaceNet/InsightFace embeddings with cosine similarity) and replace ``hamming_distance_hex``
+with the SDK's matcher. The rest of the flow (storage, dedup, reporting) is unchanged.
 """
 from __future__ import annotations
 
@@ -25,7 +24,7 @@ from io import BytesIO
 from PIL import Image
 
 # Max Hamming distance between two 64-bit dhashes that still counts as a fuzzy match.
-# Tuned for 8x8 dhash over fingerprint-like images. A dhash-only match is a SUSPECTED
+# Tuned for 8x8 dhash over face-like images. A dhash-only match is a SUSPECTED
 # duplicate, not a hard duplicate.
 DHASH_MATCH_THRESHOLD = 12
 
@@ -64,9 +63,9 @@ def hashes_from_b64_image(image_b64: str) -> tuple[str, str]:
     try:
         raw = base64.b64decode(image_b64, validate=False)
     except Exception as exc:  # noqa: BLE001
-        raise ValueError("fingerprint_image_b64 is not valid base64") from exc
+        raise ValueError("face_image_b64 is not valid base64") from exc
 
     try:
         return compute_sha256(raw), compute_dhash(raw)
     except Exception as exc:  # noqa: BLE001
-        raise ValueError("fingerprint_image_b64 is not a valid image") from exc
+        raise ValueError("face_image_b64 is not a valid image") from exc

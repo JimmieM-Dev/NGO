@@ -26,29 +26,28 @@ class RegistrationCreate(BaseModel):
     """Attendee registration payload.
 
     The client must provide EITHER:
-      - precomputed ``fingerprint_sha256`` and ``fingerprint_dhash``, OR
-      - a ``fingerprint_image_b64`` from which the server derives both.
+      - precomputed ``face_sha256`` and ``face_dhash``, OR
+      - a ``face_image_b64`` from which the server derives both.
     """
 
     full_name: str = Field(min_length=1, max_length=200)
     national_id: str = Field(min_length=3, max_length=64)
     phone: str = Field(min_length=5, max_length=32)
 
-    fingerprint_sha256: str | None = Field(
+    face_sha256: str | None = Field(
         default=None, min_length=64, max_length=64, pattern=r"^[0-9a-fA-F]{64}$"
     )
-    fingerprint_dhash: str | None = Field(
+    face_dhash: str | None = Field(
         default=None, min_length=16, max_length=16, pattern=r"^[0-9a-fA-F]{16}$"
     )
-    fingerprint_image_b64: str | None = None
+    face_image_b64: str | None = None
 
     @model_validator(mode="after")
-    def _require_fingerprint(self) -> RegistrationCreate:
-        has_hashes = self.fingerprint_sha256 and self.fingerprint_dhash
-        if not has_hashes and not self.fingerprint_image_b64:
+    def _require_face(self) -> RegistrationCreate:
+        has_hashes = self.face_sha256 and self.face_dhash
+        if not has_hashes and not self.face_image_b64:
             raise ValueError(
-                "must provide either fingerprint_image_b64 or both "
-                "fingerprint_sha256 and fingerprint_dhash"
+                "must provide either face_image_b64 or both face_sha256 and face_dhash"
             )
         return self
 
@@ -67,8 +66,8 @@ class RegistrationOut(BaseModel):
     full_name: str
     national_id: str
     phone: str
-    fingerprint_sha256: str
-    fingerprint_dhash: str
+    face_sha256: str
+    face_dhash: str
     is_duplicate: bool
     duplicate_reason: str | None
     duplicate_of_id: str | None

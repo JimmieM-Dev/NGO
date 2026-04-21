@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -39,7 +39,17 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Create all tables. Importing models registers them on Base."""
+    """Create all tables. Importing models registers them on Base.
+
+    Also performs a one-shot reset if an older schema (pre-face-capture) is detected on
+    disk. MVP-only: safe to wipe because we have no migration tool wired up yet.
+    """
     from app import models  # noqa: F401
+
+    inspector = inspect(engine)
+    if "registrations" in inspector.get_table_names():
+        cols = {c["name"] for c in inspector.get_columns("registrations")}
+        if "face_sha256" not in cols:
+            Base.metadata.drop_all(bind=engine)
 
     Base.metadata.create_all(bind=engine)

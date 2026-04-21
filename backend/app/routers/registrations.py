@@ -20,12 +20,12 @@ def _find_duplicate(
     *,
     national_id: str,
     phone: str,
-    fingerprint_sha256: str,
-    fingerprint_dhash: str,
+    face_sha256: str,
+    face_dhash: str,
 ) -> tuple[models.Registration, str, str] | None:
     """Return ``(existing, reason, field)`` if the incoming registration matches a prior one.
 
-    Match precedence: national_id > phone > fingerprint_sha256 > fingerprint_dhash.
+    Match precedence: national_id > phone > face_sha256 > face_dhash.
     """
     existing_q = select(models.Registration).where(
         models.Registration.event_id == event_id,
@@ -35,7 +35,7 @@ def _find_duplicate(
     for field, value, reason in (
         ("national_id", national_id, "National ID already registered"),
         ("phone", phone, "Phone number already registered"),
-        ("fingerprint_sha256", fingerprint_sha256, "Identical fingerprint already registered"),
+        ("face_sha256", face_sha256, "Identical face image already registered"),
     ):
         match = db.scalars(existing_q.where(getattr(models.Registration, field) == value)).first()
         if match is not None:
@@ -44,7 +44,7 @@ def _find_duplicate(
     candidates = db.scalars(existing_q).all()
     best: tuple[models.Registration, int] | None = None
     for candidate in candidates:
-        distance = hamming_distance_hex(candidate.fingerprint_dhash, fingerprint_dhash)
+        distance = hamming_distance_hex(candidate.face_dhash, face_dhash)
         if distance <= DHASH_MATCH_THRESHOLD and (best is None or distance < best[1]):
             best = (candidate, distance)
 
@@ -52,8 +52,8 @@ def _find_duplicate(
         candidate, distance = best
         return (
             candidate,
-            f"Fingerprint closely matches existing registration (distance={distance})",
-            "fingerprint_dhash",
+            f"Face closely matches existing registration (distance={distance})",
+            "face_dhash",
         )
 
     return None
@@ -69,12 +69,12 @@ def create_registration(
     if event is None:
         raise HTTPException(status_code=404, detail="event not found")
 
-    sha = payload.fingerprint_sha256
-    dhash = payload.fingerprint_dhash
+    sha = payload.face_sha256
+    dhash = payload.face_dhash
     if sha is None or dhash is None:
-        assert payload.fingerprint_image_b64 is not None  # enforced by schema validator
+        assert payload.face_image_b64 is not None  # enforced by schema validator
         try:
-            sha, dhash = hashes_from_b64_image(payload.fingerprint_image_b64)
+            sha, dhash = hashes_from_b64_image(payload.face_image_b64)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -83,9 +83,21 @@ def create_registration(
         event_id,
         national_id=payload.national_id.strip(),
         phone=payload.phone.strip(),
-        fingerprint_sha256=sha.lower(),
-        fingerprint_dhash=dhash.lower(),
+        face_sha256=sha.lower(),
+        face_dhash=dhash.lower(),
     )
+
+    # Hard-refuse any duplicate match so the same person cannot be registered twice per event.
+    if duplicate is not None:
+        matched, reason, field = duplicate
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "reason": reason,
+                "matched_field": field,
+                "matched_registration_id": matched.id,
+            },
+        )
 
     registration = models.Registration(
         id=str(uuid.uuid4()),
@@ -93,29 +105,20 @@ def create_registration(
         full_name=payload.full_name.strip(),
         national_id=payload.national_id.strip(),
         phone=payload.phone.strip(),
-        fingerprint_sha256=sha.lower(),
-        fingerprint_dhash=dhash.lower(),
-        fingerprint_image_b64=payload.fingerprint_image_b64,
-        is_duplicate=duplicate is not None,
-        duplicate_reason=duplicate[1] if duplicate else None,
-        duplicate_of_id=duplicate[0].id if duplicate else None,
+        face_sha256=sha.lower(),
+        face_dhash=dhash.lower(),
+        face_image_b64=payload.face_image_b64,
+        is_duplicate=False,
+        duplicate_reason=None,
+        duplicate_of_id=None,
     )
     db.add(registration)
     db.commit()
     db.refresh(registration)
 
-    dup_info = None
-    if duplicate is not None:
-        matched, reason, field = duplicate
-        dup_info = schemas.DuplicateInfo(
-            reason=reason,
-            matched_registration_id=matched.id,
-            matched_field=field,
-        )
-
     return schemas.RegistrationCreateResponse(
         registration=schemas.RegistrationOut.model_validate(registration),
-        duplicate=dup_info,
+        duplicate=None,
     )
 
 

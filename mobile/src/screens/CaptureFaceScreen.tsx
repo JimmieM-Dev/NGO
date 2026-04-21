@@ -4,12 +4,12 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { PrimaryButton } from '../components/PrimaryButton';
-import { colors, sharedStyles, spacing } from '../theme';
+import { sharedStyles, spacing } from '../theme';
 import type { RootStackParamList } from '../navigation';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CaptureFingerprint'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'CaptureFace'>;
 
-export function CaptureFingerprintScreen({ navigation, route }: Props) {
+export function CaptureFaceScreen({ navigation, route }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export function CaptureFingerprintScreen({ navigation, route }: Props) {
       <View style={[sharedStyles.screen, styles.centered, { padding: spacing.lg }]}>
         <Text style={sharedStyles.heading}>Camera permission needed</Text>
         <Text style={sharedStyles.subheading}>
-          We need camera access to capture attendee fingerprints.
+          We need camera access to capture attendee faces.
         </Text>
         <PrimaryButton title="Grant permission" onPress={requestPermission} />
       </View>
@@ -78,11 +78,11 @@ export function CaptureFingerprintScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="front" />
           <View pointerEvents="none" style={styles.guide}>
             <View style={styles.guideBox} />
             <Text style={styles.guideText}>
-              Align the attendee&apos;s index finger inside the frame
+              Align the attendee&apos;s face inside the frame
             </Text>
           </View>
           <View style={styles.controls}>
@@ -121,11 +121,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   guideBox: {
-    width: 220,
-    height: 280,
+    width: 240,
+    height: 300,
     borderWidth: 3,
     borderColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 160,
     opacity: 0.8,
   },
   guideText: {
@@ -139,3 +139,4 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
 });
+

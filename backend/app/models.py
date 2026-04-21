@@ -31,8 +31,8 @@ class Event(Base):
 class Registration(Base):
     """An attendee's registration at a specific event.
 
-    ``fingerprint_sha256`` is a SHA-256 of the raw captured fingerprint image bytes, used for
-    exact-match dedup. ``fingerprint_dhash`` is a 64-bit difference hash represented as a
+    ``face_sha256`` is a SHA-256 of the raw captured face image bytes, used for
+    exact-match dedup. ``face_dhash`` is a 64-bit difference hash represented as a
     16-char hex string, used for fuzzy matching with Hamming distance.
     """
 
@@ -47,9 +47,9 @@ class Registration(Base):
     national_id: Mapped[str] = mapped_column(String(64), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
 
-    fingerprint_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    fingerprint_dhash: Mapped[str] = mapped_column(String(16), nullable=False)
-    fingerprint_image_b64: Mapped[str | None] = mapped_column(Text)
+    face_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    face_dhash: Mapped[str] = mapped_column(String(16), nullable=False)
+    face_image_b64: Mapped[str | None] = mapped_column(Text)
 
     is_duplicate: Mapped[bool] = mapped_column(default=False, nullable=False)
     duplicate_reason: Mapped[str | None] = mapped_column(String(200))
@@ -62,5 +62,5 @@ class Registration(Base):
     __table_args__ = (
         Index("ix_registrations_event_national_id", "event_id", "national_id"),
         Index("ix_registrations_event_phone", "event_id", "phone"),
-        Index("ix_registrations_event_sha256", "event_id", "fingerprint_sha256"),
+        Index("ix_registrations_event_sha256", "event_id", "face_sha256"),
     )

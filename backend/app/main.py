@@ -21,7 +21,7 @@ def create_app() -> FastAPI:
         title="NGO Biometric Registration API",
         version="0.1.0",
         description=(
-            "Backend for registering attendees at NGO sensitization events using biometric, "
+            "Backend for registering attendees at NGO sensitization events using face, "
             "national ID, and phone number signals to prevent duplicate registrations."
         ),
         lifespan=lifespan,

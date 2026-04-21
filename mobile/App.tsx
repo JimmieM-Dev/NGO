@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { CaptureFingerprintScreen } from './src/screens/CaptureFingerprintScreen';
+import { CaptureFaceScreen } from './src/screens/CaptureFaceScreen';
 import { DuplicatesScreen } from './src/screens/DuplicatesScreen';
 import { EventDashboardScreen } from './src/screens/EventDashboardScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -28,9 +28,9 @@ export default function App() {
           <Stack.Screen name="EventDashboard" component={EventDashboardScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register attendee' }} />
           <Stack.Screen
-            name="CaptureFingerprint"
-            component={CaptureFingerprintScreen}
-            options={{ title: 'Capture fingerprint' }}
+            name="CaptureFace"
+            component={CaptureFaceScreen}
+            options={{ title: 'Capture face' }}
           />
           <Stack.Screen name="Duplicates" component={DuplicatesScreen} />
         </Stack.Navigator>
