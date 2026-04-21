@@ -7,7 +7,15 @@ from collections.abc import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-DATABASE_URL = os.environ.get("NGO_DATABASE_URL", "sqlite:///./ngo.db")
+
+def _default_database_url() -> str:
+    # When running on Fly.io the deploy tool mounts a persistent volume at /data.
+    if os.path.isdir("/data") and os.access("/data", os.W_OK):
+        return "sqlite:////data/app.db"
+    return "sqlite:///./ngo.db"
+
+
+DATABASE_URL = os.environ.get("NGO_DATABASE_URL", _default_database_url())
 
 engine = create_engine(
     DATABASE_URL,
