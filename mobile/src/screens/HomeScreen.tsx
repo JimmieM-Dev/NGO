@@ -88,7 +88,7 @@ export function HomeScreen({ navigation }: Props) {
             <View style={sharedStyles.card}>
               <Text style={sharedStyles.heading}>Start a new event</Text>
               <Text style={sharedStyles.subheading}>
-                Create a sensitization event, then register attendees with fingerprint,
+                Create a sensitization event, then register attendees with a face photo,
                 national ID, and phone to prevent duplicate sign-ups.
               </Text>
               <View>

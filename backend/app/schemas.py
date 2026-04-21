@@ -68,6 +68,7 @@ class RegistrationOut(BaseModel):
     phone: str
     face_sha256: str
     face_dhash: str
+    face_image_b64: str | None
     is_duplicate: bool
     duplicate_reason: str | None
     duplicate_of_id: str | None

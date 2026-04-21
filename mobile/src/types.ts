@@ -14,6 +14,7 @@ export type Registration = {
   phone: string;
   face_sha256: string;
   face_dhash: string;
+  face_image_b64: string | null;
   is_duplicate: boolean;
   duplicate_reason: string | null;
   duplicate_of_id: string | null;

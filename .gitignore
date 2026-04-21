@@ -27,3 +27,6 @@ web-build/
 # Env files
 .env
 .env.local
+
+test-plan.md
+test-report.md

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -114,23 +115,39 @@ function RegistrationRow({ reg }: { reg: Registration }) {
     <View
       style={[
         sharedStyles.card,
+        styles.regRow,
         reg.is_duplicate ? { borderColor: colors.danger } : null,
       ]}
     >
-      <View style={styles.rowHeader}>
-        <Text style={styles.name}>{reg.full_name}</Text>
-        {reg.is_duplicate ? <Text style={styles.dupTag}>DUPLICATE</Text> : null}
-      </View>
-      <Text style={sharedStyles.subheading}>ID: {reg.national_id}</Text>
-      <Text style={sharedStyles.subheading}>Phone: {reg.phone}</Text>
-      {reg.duplicate_reason ? (
-        <Text style={[sharedStyles.subheading, { color: colors.danger }]}>
-          {reg.duplicate_reason}
+      {reg.face_image_b64 ? (
+        <Image
+          source={{ uri: `data:image/jpeg;base64,${reg.face_image_b64}` }}
+          style={styles.avatar}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={styles.avatarPlaceholderText}>
+            {reg.full_name.charAt(0).toUpperCase() || '?'}
+          </Text>
+        </View>
+      )}
+      <View style={styles.regBody}>
+        <View style={styles.rowHeader}>
+          <Text style={styles.name}>{reg.full_name}</Text>
+          {reg.is_duplicate ? <Text style={styles.dupTag}>DUPLICATE</Text> : null}
+        </View>
+        <Text style={sharedStyles.subheading}>ID: {reg.national_id}</Text>
+        <Text style={sharedStyles.subheading}>Phone: {reg.phone}</Text>
+        {reg.duplicate_reason ? (
+          <Text style={[sharedStyles.subheading, { color: colors.danger }]}>
+            {reg.duplicate_reason}
+          </Text>
+        ) : null}
+        <Text style={sharedStyles.subheading}>
+          {new Date(reg.created_at).toLocaleString()}
         </Text>
-      ) : null}
-      <Text style={sharedStyles.subheading}>
-        {new Date(reg.created_at).toLocaleString()}
-      </Text>
+      </View>
     </View>
   );
 }
@@ -164,6 +181,30 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontWeight: '700',
     fontSize: 12,
+  },
+  regRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+  },
+  regBody: {
+    flex: 1,
+    gap: 2,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: colors.border,
+  },
+  avatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPlaceholderText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.muted,
   },
   error: {
     color: colors.danger,
