@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, CSSProperties } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -29,6 +29,8 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
   const fallbackInputRef = useRef<HTMLInputElement | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
   const [error, setError] = useState<string | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   const stopStream = useCallback(() => {
     const stream = streamRef.current;
@@ -39,10 +41,13 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setVideoPlaying(false);
   }, []);
 
   const startCamera = useCallback(async () => {
     setError(null);
+    setAutoplayBlocked(false);
+    setVideoPlaying(false);
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       setStage({
         kind: 'fallback',
@@ -53,7 +58,11 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
     setStage({ kind: 'starting' });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'user' } },
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       });
       streamRef.current = stream;
@@ -76,13 +85,27 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
 
   // Attach the stream to the <video> element once it's mounted and we're live.
   useEffect(() => {
-    if (stage.kind === 'live' && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {
-        /* autoplay may require user gesture; the button will retry */
+    if (stage.kind !== 'live') return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise.catch(() => {
+        setAutoplayBlocked(true);
       });
     }
   }, [stage.kind]);
+
+  const manualPlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.play().then(
+      () => setAutoplayBlocked(false),
+      () => setAutoplayBlocked(true),
+    );
+  };
 
   const takePhoto = () => {
     const video = videoRef.current;
@@ -98,8 +121,11 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
       setError('Could not capture a frame from the camera.');
       return;
     }
+    // Flip horizontally so the saved photo matches the mirrored preview users see.
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL(PREVIEW_MIME, 0.8);
+    const dataUrl = canvas.toDataURL(PREVIEW_MIME, 0.85);
     stopStream();
     setStage({ kind: 'preview', b64: extractBase64(dataUrl), mime: PREVIEW_MIME });
   };
@@ -138,33 +164,60 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
 
   if (Platform.OS !== 'web') return null;
 
+  const videoStyle: CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    borderRadius: 10,
+    // Mirror the preview so the user's movements match (natural selfie behavior).
+    transform: 'scaleX(-1)',
+    backgroundColor: '#0f172a',
+  };
+
   return (
     <View style={sharedStyles.screen}>
       <View style={sharedStyles.content}>
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.heading}>Capture face</Text>
           <Text style={sharedStyles.subheading}>
-            Position the attendee in the frame and tap &quot;Take photo&quot;. The
-            photo is captured locally from your device&apos;s front camera.
+            Line up the attendee in the frame and tap &quot;Take photo&quot;. The
+            photo is captured locally from the device&apos;s front camera.
           </Text>
 
-          {stage.kind === 'starting' ? (
-            <Text style={sharedStyles.subheading}>Opening camera…</Text>
-          ) : null}
-
           {(stage.kind === 'live' || stage.kind === 'starting') && (
-            <View style={styles.previewImage}>
+            <View style={styles.previewFrame}>
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }}
+                onPlaying={() => {
+                  setVideoPlaying(true);
+                  setAutoplayBlocked(false);
+                }}
+                style={videoStyle}
               />
+              {stage.kind === 'starting' || !videoPlaying ? (
+                <View style={styles.overlay} pointerEvents="none">
+                  <Text style={styles.overlayText}>
+                    {autoplayBlocked
+                      ? 'Tap "Start camera" below to begin'
+                      : 'Starting camera…'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.readyBadge} pointerEvents="none">
+                  <Text style={styles.readyBadgeText}>● Live</Text>
+                </View>
+              )}
             </View>
           )}
 
-          {stage.kind === 'live' ? (
+          {stage.kind === 'live' && autoplayBlocked && !videoPlaying ? (
+            <PrimaryButton title="Start camera" onPress={manualPlay} />
+          ) : null}
+
+          {stage.kind === 'live' && videoPlaying ? (
             <PrimaryButton title="Take photo" onPress={takePhoto} />
           ) : null}
 
@@ -172,7 +225,7 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
             <>
               <Image
                 source={{ uri: `data:${stage.mime};base64,${stage.b64}` }}
-                style={styles.previewImage}
+                style={styles.previewFrame}
                 resizeMode="cover"
               />
               <PrimaryButton title="Retake" variant="secondary" onPress={retake} />
@@ -209,12 +262,44 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  previewImage: {
+  previewFrame: {
     width: '100%',
-    height: 320,
+    aspectRatio: 3 / 4,
     borderRadius: 10,
-    backgroundColor: colors.border,
+    backgroundColor: '#0f172a',
+    borderWidth: 2,
+    borderColor: colors.primary,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+  },
+  overlayText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  readyBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(21, 128, 61, 0.9)',
+  },
+  readyBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   error: {
     color: colors.danger,
