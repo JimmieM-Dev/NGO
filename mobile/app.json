@@ -40,7 +40,7 @@
       ]
     ],
     "extra": {
-      "apiBaseUrl": "http://localhost:8000"
+      "apiBaseUrl": "https://ngo-biometric-backend-ksxakowm.fly.dev"
     }
   }
 }
