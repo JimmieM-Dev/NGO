@@ -31,6 +31,7 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [videoDims, setVideoDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
   const stopStream = useCallback(() => {
     const stream = streamRef.current;
@@ -171,7 +172,8 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
     borderRadius: 10,
     // Mirror the preview so the user's movements match (natural selfie behavior).
     transform: 'scaleX(-1)',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
+    display: 'block',
   };
 
   return (
@@ -191,10 +193,17 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
                 autoPlay
                 playsInline
                 muted
-                onPlaying={() => {
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  setVideoDims({ w: v.videoWidth, h: v.videoHeight });
+                }}
+                onPlaying={(e) => {
+                  const v = e.currentTarget;
+                  setVideoDims({ w: v.videoWidth, h: v.videoHeight });
                   setVideoPlaying(true);
                   setAutoplayBlocked(false);
                 }}
+                onError={() => setError('Video element error — try "Retry camera" or upload a photo.')}
                 style={videoStyle}
               />
               {stage.kind === 'starting' || !videoPlaying ? (
@@ -213,12 +222,28 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
             </View>
           )}
 
+          {stage.kind === 'live' && videoPlaying ? (
+            <Text style={styles.debugLine}>
+              Live camera: {videoDims.w}×{videoDims.h}. If the preview looks dark,
+              open your laptop&apos;s webcam cover or improve lighting.
+            </Text>
+          ) : null}
+
           {stage.kind === 'live' && autoplayBlocked && !videoPlaying ? (
             <PrimaryButton title="Start camera" onPress={manualPlay} />
           ) : null}
 
           {stage.kind === 'live' && videoPlaying ? (
             <PrimaryButton title="Take photo" onPress={takePhoto} />
+          ) : null}
+          {stage.kind === 'live' && !videoPlaying ? (
+            <>
+              <PrimaryButton title="Retry camera" variant="secondary" onPress={retake} />
+              <PrimaryButton
+                title="Upload photo instead"
+                onPress={() => fallbackInputRef.current?.click()}
+              />
+            </>
           ) : null}
 
           {stage.kind === 'preview' ? (
@@ -304,5 +329,10 @@ const styles = StyleSheet.create({
   error: {
     color: colors.danger,
     marginTop: spacing.xs,
+  },
+  debugLine: {
+    fontSize: 12,
+    color: colors.muted,
+    fontFamily: 'monospace',
   },
 });

@@ -12,6 +12,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { api, ApiError } from '../api';
+import { getApiBaseUrl } from '../config';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { setActiveEventId } from '../storage';
 import { colors, sharedStyles, spacing } from '../theme';
@@ -122,7 +123,13 @@ export function HomeScreen({ navigation }: Props) {
             </View>
 
             <Text style={[sharedStyles.heading, { marginTop: spacing.md }]}>Recent events</Text>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? (
+              <View style={styles.errorCard}>
+                <Text style={styles.error}>{error}</Text>
+                <Text style={styles.errorHint}>Backend: {getApiBaseUrl()}</Text>
+                <PrimaryButton title="Retry" variant="secondary" onPress={load} />
+              </View>
+            ) : null}
             {loading && events.length === 0 ? <ActivityIndicator /> : null}
           </View>
         }
@@ -165,5 +172,19 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
+    fontWeight: '600',
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 8,
+    padding: spacing.md,
+    gap: spacing.sm,
+    backgroundColor: '#fef2f2',
+  },
+  errorHint: {
+    fontSize: 12,
+    color: colors.muted,
+    fontFamily: 'monospace',
   },
 });
