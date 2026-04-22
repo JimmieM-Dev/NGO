@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties } from 'react';
-import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -197,9 +197,12 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={sharedStyles.screen}>
-      <View style={sharedStyles.content}>
-        <View style={sharedStyles.card}>
+    <ScrollView
+      style={sharedStyles.screen}
+      contentContainerStyle={[sharedStyles.content, styles.scrollPad]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={sharedStyles.card}>
           <Text style={sharedStyles.heading}>Capture face</Text>
           <Text style={sharedStyles.subheading}>
             Line up the attendee in the frame and tap &quot;Take photo&quot;. Use
@@ -288,7 +291,7 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
           {stage.kind === 'fallback' ? (
             <>
               <Text style={sharedStyles.subheading}>{stage.message}</Text>
-              <PrimaryButton title="Retry camera" variant="secondary" onPress={startCamera} />
+              <PrimaryButton title="Retry camera" variant="secondary" onPress={() => startCamera()} />
               <PrimaryButton
                 title="Upload photo instead"
                 onPress={() => fallbackInputRef.current?.click()}
@@ -297,7 +300,6 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
           ) : null}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
       </View>
 
       {/* Hidden input used only as a fallback when the camera can't be opened. */}
@@ -309,14 +311,18 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
         style={{ display: 'none' }}
         onChange={onFallbackFile}
       />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollPad: {
+    paddingBottom: spacing.xl,
+  },
   previewFrame: {
     width: '100%',
-    aspectRatio: 3 / 4,
+    aspectRatio: 4 / 3,
+    maxHeight: 360,
     borderRadius: 10,
     backgroundColor: '#0f172a',
     borderWidth: 2,
