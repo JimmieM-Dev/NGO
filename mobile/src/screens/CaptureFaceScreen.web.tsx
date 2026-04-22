@@ -16,6 +16,8 @@ type Stage =
   | { kind: 'preview'; b64: string; mime: string }
   | { kind: 'fallback'; message: string };
 
+type Facing = 'user' | 'environment';
+
 const PREVIEW_MIME = 'image/jpeg';
 
 function extractBase64(dataUrl: string): string {
@@ -32,6 +34,11 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [videoDims, setVideoDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  // Default to the back camera so the person registering attendees can simply
+  // point the device at them; operators can flip to the front camera if they
+  // prefer selfies or are using a laptop with only one webcam.
+  const [facing, setFacing] = useState<Facing>('environment');
+  const facingRef = useRef<Facing>('environment');
 
   const stopStream = useCallback(() => {
     const stream = streamRef.current;
@@ -45,10 +52,12 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
     setVideoPlaying(false);
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (requested?: Facing) => {
+    const desired: Facing = requested ?? facingRef.current;
     setError(null);
     setAutoplayBlocked(false);
     setVideoPlaying(false);
+    stopStream();
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       setStage({
         kind: 'fallback',
@@ -60,13 +69,15 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: 'user' },
+          facingMode: { ideal: desired },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
         audio: false,
       });
       streamRef.current = stream;
+      facingRef.current = desired;
+      setFacing(desired);
       setStage({ kind: 'live' });
     } catch (e) {
       const message =
@@ -75,14 +86,20 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
           : 'Could not open the camera on this device. You can upload a photo instead.';
       setStage({ kind: 'fallback', message });
     }
-  }, []);
+  }, [stopStream]);
 
   useEffect(() => {
     void startCamera();
     return () => {
       stopStream();
     };
-  }, [startCamera, stopStream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const switchCamera = useCallback(async () => {
+    const next: Facing = facingRef.current === 'user' ? 'environment' : 'user';
+    await startCamera(next);
+  }, [startCamera]);
 
   // Attach the stream to the <video> element once it's mounted and we're live.
   useEffect(() => {
@@ -122,9 +139,12 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
       setError('Could not capture a frame from the camera.');
       return;
     }
-    // Flip horizontally so the saved photo matches the mirrored preview users see.
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
+    // Only mirror the saved photo when using the front camera so that it matches
+    // the mirrored preview; the back camera is not mirrored.
+    if (facingRef.current === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL(PREVIEW_MIME, 0.85);
     stopStream();
@@ -133,7 +153,7 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
 
   const retake = async () => {
     setError(null);
-    await startCamera();
+    await startCamera(facingRef.current);
   };
 
   const confirm = () => {
@@ -170,8 +190,8 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
     height: '100%',
     objectFit: 'cover',
     borderRadius: 10,
-    // Mirror the preview so the user's movements match (natural selfie behavior).
-    transform: 'scaleX(-1)',
+    // Mirror only the front camera preview for natural selfie behavior.
+    transform: facing === 'user' ? 'scaleX(-1)' : 'none',
     backgroundColor: '#ffffff',
     display: 'block',
   };
@@ -182,8 +202,8 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.heading}>Capture face</Text>
           <Text style={sharedStyles.subheading}>
-            Line up the attendee in the frame and tap &quot;Take photo&quot;. The
-            photo is captured locally from the device&apos;s front camera.
+            Line up the attendee in the frame and tap &quot;Take photo&quot;. Use
+            &quot;Switch camera&quot; to flip between the front and back cameras.
           </Text>
 
           {(stage.kind === 'live' || stage.kind === 'starting') && (
@@ -234,7 +254,14 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
           ) : null}
 
           {stage.kind === 'live' && videoPlaying ? (
-            <PrimaryButton title="Take photo" onPress={takePhoto} />
+            <>
+              <PrimaryButton title="Take photo" onPress={takePhoto} />
+              <PrimaryButton
+                title={facing === 'user' ? 'Switch to back camera' : 'Switch to front camera'}
+                variant="secondary"
+                onPress={switchCamera}
+              />
+            </>
           ) : null}
           {stage.kind === 'live' && !videoPlaying ? (
             <>

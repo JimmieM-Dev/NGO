@@ -14,6 +14,9 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
   const cameraRef = useRef<CameraView | null>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  // Default to the back camera so the operator can point the device at the
+  // attendee rather than asking them to take a selfie.
+  const [facing, setFacing] = useState<'front' | 'back'>('back');
 
   if (!permission) {
     return (
@@ -78,7 +81,7 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="front" />
+          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
           <View pointerEvents="none" style={styles.guide}>
             <View style={styles.guideBox} />
             <Text style={styles.guideText}>
@@ -87,6 +90,11 @@ export function CaptureFaceScreen({ navigation, route }: Props) {
           </View>
           <View style={styles.controls}>
             <PrimaryButton title="Capture" onPress={capture} loading={busy} />
+            <PrimaryButton
+              title={facing === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
+              variant="secondary"
+              onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
+            />
           </View>
         </View>
       )}
