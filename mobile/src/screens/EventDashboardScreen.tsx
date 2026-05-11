@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -12,8 +11,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { api } from '../api';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { shortHash } from '../fingerprint';
 import { colors, sharedStyles, spacing } from '../theme';
-import type { EventStats, Registration } from '../types';
+import type { Checkin, EventStats } from '../types';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EventDashboard'>;
@@ -21,7 +21,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'EventDashboard'>;
 export function EventDashboardScreen({ navigation, route }: Props) {
   const { eventId, eventName } = route.params;
   const [stats, setStats] = useState<EventStats | null>(null);
-  const [recent, setRecent] = useState<Registration[]>([]);
+  const [recent, setRecent] = useState<Checkin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,12 +29,12 @@ export function EventDashboardScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [s, regs] = await Promise.all([
+      const [s, ck] = await Promise.all([
         api.getStats(eventId),
-        api.listRegistrations(eventId),
+        api.listCheckins(eventId),
       ]);
       setStats(s);
-      setRecent(regs.slice(0, 20));
+      setRecent(ck.slice(0, 50));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load event data');
     } finally {
@@ -58,24 +58,32 @@ export function EventDashboardScreen({ navigation, route }: Props) {
         ListHeaderComponent={
           <View style={{ gap: spacing.md }}>
             <View style={[sharedStyles.card, styles.statsRow]}>
-              <Stat label="Total" value={stats?.total ?? '–'} />
-              <Stat label="Unique" value={stats?.unique ?? '–'} color={colors.success} />
-              <Stat label="Duplicates" value={stats?.duplicates ?? '–'} color={colors.danger} />
+              <Stat label="Checked in" value={stats?.checked_in ?? '–'} />
+              <Stat
+                label="From list"
+                value={stats?.invitees_claimed ?? '–'}
+                color={colors.success}
+              />
+              <Stat label="Walk-ins" value={stats?.walkins ?? '–'} color={colors.accent} />
             </View>
 
             <View style={{ gap: spacing.sm }}>
               <PrimaryButton
-                title="Register new attendee"
-                onPress={() => navigation.navigate('Register', { eventId, eventName })}
+                title="Check in attendee"
+                onPress={() => navigation.navigate('Checkin', { eventId, eventName })}
               />
               <PrimaryButton
-                title="View flagged duplicates"
+                title="Manage invitee list"
                 variant="secondary"
-                onPress={() => navigation.navigate('Duplicates', { eventId, eventName })}
+                onPress={() => navigation.navigate('Invitees', { eventId, eventName })}
               />
             </View>
 
-            <Text style={sharedStyles.heading}>Recent registrations</Text>
+            <Text style={sharedStyles.heading}>Anonymous roster</Text>
+            <Text style={sharedStyles.subheading}>
+              Per-event log is identity-free. Names live in the admin-only
+              attendee directory (not shown on this screen).
+            </Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
             {loading && recent.length === 0 ? <ActivityIndicator /> : null}
           </View>
@@ -83,11 +91,11 @@ export function EventDashboardScreen({ navigation, route }: Props) {
         ListEmptyComponent={
           !loading ? (
             <Text style={sharedStyles.subheading}>
-              No attendees registered yet. Tap "Register new attendee" to start.
+              No check-ins yet. Tap &quot;Check in attendee&quot; to start.
             </Text>
           ) : null
         }
-        renderItem={({ item }) => <RegistrationRow reg={item} />}
+        renderItem={({ item }) => <CheckinRow row={item} />}
       />
     </View>
   );
@@ -110,103 +118,45 @@ function Stat({
   );
 }
 
-function RegistrationRow({ reg }: { reg: Registration }) {
+function CheckinRow({ row }: { row: Checkin }) {
   return (
-    <View
-      style={[
-        sharedStyles.card,
-        styles.regRow,
-        reg.is_duplicate ? { borderColor: colors.danger } : null,
-      ]}
-    >
-      {reg.face_image_b64 ? (
-        <Image
-          source={{ uri: `data:image/jpeg;base64,${reg.face_image_b64}` }}
-          style={styles.avatar}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarPlaceholderText}>
-            {reg.full_name.charAt(0).toUpperCase() || '?'}
-          </Text>
-        </View>
-      )}
-      <View style={styles.regBody}>
-        <View style={styles.rowHeader}>
-          <Text style={styles.name}>{reg.full_name}</Text>
-          {reg.is_duplicate ? <Text style={styles.dupTag}>DUPLICATE</Text> : null}
-        </View>
-        <Text style={sharedStyles.subheading}>ID: {reg.national_id}</Text>
-        <Text style={sharedStyles.subheading}>Phone: {reg.phone}</Text>
-        {reg.duplicate_reason ? (
-          <Text style={[sharedStyles.subheading, { color: colors.danger }]}>
-            {reg.duplicate_reason}
-          </Text>
-        ) : null}
-        <Text style={sharedStyles.subheading}>
-          {new Date(reg.created_at).toLocaleString()}
+    <View style={[sharedStyles.card, styles.row]}>
+      <View style={styles.hashChip}>
+        <Text style={styles.hashChipText}>{shortHash(row.template_hash)}…</Text>
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={styles.timeText}>
+          {new Date(row.checked_in_at).toLocaleString()}
         </Text>
+        {row.lat != null && row.lng != null ? (
+          <Text style={sharedStyles.subheading}>
+            {row.lat.toFixed(4)}, {row.lng.toFixed(4)}
+          </Text>
+        ) : (
+          <Text style={sharedStyles.subheading}>no location</Text>
+        )}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  stat: { alignItems: 'center', gap: 4 },
+  statValue: { fontSize: 24, fontWeight: '700', color: colors.text },
+  row: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
+  hashChip: {
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
-  stat: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 24,
+  hashChipText: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    color: '#1e3a8a',
     fontWeight: '700',
-    color: colors.text,
   },
-  rowHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  dupTag: {
-    color: colors.danger,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  regRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  regBody: {
-    flex: 1,
-    gap: 2,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: colors.border,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarPlaceholderText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.muted,
-  },
-  error: {
-    color: colors.danger,
-  },
+  timeText: { fontSize: 14, fontWeight: '600', color: colors.text },
+  error: { color: colors.danger },
 });

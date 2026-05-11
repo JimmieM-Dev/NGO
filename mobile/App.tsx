@@ -3,11 +3,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { CaptureFaceScreen } from './src/screens/CaptureFaceScreen';
-import { DuplicatesScreen } from './src/screens/DuplicatesScreen';
+import { CaptureFingerprintScreen } from './src/screens/CaptureFingerprintScreen';
+import { CheckinScreen } from './src/screens/CheckinScreen';
 import { EventDashboardScreen } from './src/screens/EventDashboardScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
-import { RegisterScreen } from './src/screens/RegisterScreen';
+import { InviteesScreen } from './src/screens/InviteesScreen';
 import { colors } from './src/theme';
 import type { RootStackParamList } from './src/navigation';
 
@@ -26,13 +26,17 @@ export default function App() {
         >
           <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Quorum' }} />
           <Stack.Screen name="EventDashboard" component={EventDashboardScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register attendee' }} />
           <Stack.Screen
-            name="CaptureFace"
-            component={CaptureFaceScreen}
-            options={{ title: 'Capture face' }}
+            name="Checkin"
+            component={CheckinScreen}
+            options={{ title: 'Check in' }}
           />
-          <Stack.Screen name="Duplicates" component={DuplicatesScreen} />
+          <Stack.Screen
+            name="CaptureFingerprint"
+            component={CaptureFingerprintScreen}
+            options={{ title: 'Capture fingerprint' }}
+          />
+          <Stack.Screen name="Invitees" component={InviteesScreen} />
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style="light" />

@@ -1,4 +1,4 @@
-"""FastAPI application entrypoint."""
+"""FastAPI application entrypoint for Quorum."""
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
-from app.routers import events, registrations, reports
+from app.routers import checkins, events, invitees, reports
 
 
 @asynccontextmanager
@@ -35,7 +35,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(events.router)
-    app.include_router(registrations.router)
+    app.include_router(invitees.router)
+    app.include_router(checkins.router)
     app.include_router(reports.router)
 
     @app.get("/health", tags=["meta"])

@@ -1,4 +1,4 @@
-"""Reporting endpoints: stats, duplicates, CSV export."""
+"""Reporting endpoints: per-event stats + CSV exports (anonymous / named)."""
 from __future__ import annotations
 
 import csv
@@ -15,91 +15,116 @@ from app.db import get_db
 router = APIRouter(prefix="/events/{event_id}", tags=["reports"])
 
 
-@router.get("/stats", response_model=schemas.EventStats)
-def event_stats(event_id: str, db: Session = Depends(get_db)) -> schemas.EventStats:
-    if db.get(models.Event, event_id) is None:
-        raise HTTPException(status_code=404, detail="event not found")
-
-    total = db.scalar(
-        select(func.count(models.Registration.id)).where(
-            models.Registration.event_id == event_id
-        )
-    ) or 0
-    duplicates = db.scalar(
-        select(func.count(models.Registration.id)).where(
-            models.Registration.event_id == event_id,
-            models.Registration.is_duplicate.is_(True),
-        )
-    ) or 0
-    return schemas.EventStats(
-        event_id=event_id,
-        total=total,
-        unique=total - duplicates,
-        duplicates=duplicates,
-    )
-
-
-@router.get("/duplicates", response_model=list[schemas.RegistrationOut])
-def list_duplicates(event_id: str, db: Session = Depends(get_db)) -> list[models.Registration]:
-    if db.get(models.Event, event_id) is None:
-        raise HTTPException(status_code=404, detail="event not found")
-
-    q = (
-        select(models.Registration)
-        .where(
-            models.Registration.event_id == event_id,
-            models.Registration.is_duplicate.is_(True),
-        )
-        .order_by(models.Registration.created_at.desc())
-    )
-    return list(db.scalars(q).all())
-
-
-@router.get("/export.csv")
-def export_csv(event_id: str, db: Session = Depends(get_db)) -> StreamingResponse:
+def _require_event(db: Session, event_id: str) -> models.Event:
     event = db.get(models.Event, event_id)
     if event is None:
         raise HTTPException(status_code=404, detail="event not found")
+    return event
+
+
+@router.get("/stats", response_model=schemas.EventStats)
+def event_stats(event_id: str, db: Session = Depends(get_db)) -> schemas.EventStats:
+    _require_event(db, event_id)
+
+    checked_in = db.scalar(
+        select(func.count(models.Checkin.id)).where(models.Checkin.event_id == event_id)
+    ) or 0
+    invitees_total = db.scalar(
+        select(func.count(models.Invitee.id)).where(models.Invitee.event_id == event_id)
+    ) or 0
+    invitees_claimed = db.scalar(
+        select(func.count(models.Invitee.id)).where(
+            models.Invitee.event_id == event_id,
+            models.Invitee.claimed_by_attendee_id.is_not(None),
+        )
+    ) or 0
+
+    return schemas.EventStats(
+        event_id=event_id,
+        checked_in=checked_in,
+        invitees_total=invitees_total,
+        invitees_claimed=invitees_claimed,
+        walkins=max(checked_in - invitees_claimed, 0),
+    )
+
+
+@router.get("/export.csv")
+def export_anonymous_csv(event_id: str, db: Session = Depends(get_db)) -> StreamingResponse:
+    """Anonymous roster — no names. Safe to share."""
+    event = _require_event(db, event_id)
 
     rows = db.scalars(
-        select(models.Registration)
-        .where(models.Registration.event_id == event_id)
-        .order_by(models.Registration.created_at.asc())
+        select(models.Checkin)
+        .where(models.Checkin.event_id == event_id)
+        .order_by(models.Checkin.checked_in_at.asc())
     ).all()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["checkin_id", "template_hash", "checked_in_at", "lat", "lng"])
+    for r in rows:
+        writer.writerow(
+            [
+                r.id,
+                r.template_hash,
+                r.checked_in_at.isoformat(),
+                "" if r.lat is None else r.lat,
+                "" if r.lng is None else r.lng,
+            ]
+        )
+    buffer.seek(0)
+    filename = f"quorum-event-{event.id}-anonymous.csv"
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/export-named.csv")
+def export_named_csv(event_id: str, db: Session = Depends(get_db)) -> StreamingResponse:
+    """Named roster — joins to the attendee directory. Admin-only.
+
+    NOTE: auth middleware will gate this in Phase 2. For now the endpoint is
+    accessible to anyone on the API; the export filename is also explicit so
+    accidental sharing is obvious.
+    """
+    event = _require_event(db, event_id)
+
+    stmt = (
+        select(models.Checkin, models.Attendee)
+        .join(models.Attendee, models.Attendee.template_hash == models.Checkin.template_hash)
+        .where(models.Checkin.event_id == event_id)
+        .order_by(models.Checkin.checked_in_at.asc())
+    )
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
         [
-            "id",
-            "full_name",
-            "national_id",
-            "phone",
-            "face_sha256",
-            "face_dhash",
-            "is_duplicate",
-            "duplicate_reason",
-            "duplicate_of_id",
-            "created_at",
+            "checkin_id",
+            "template_hash",
+            "display_name",
+            "phone_last4",
+            "checked_in_at",
+            "lat",
+            "lng",
         ]
     )
-    for r in rows:
+    for checkin, attendee in db.execute(stmt):
         writer.writerow(
             [
-                r.id,
-                r.full_name,
-                r.national_id,
-                r.phone,
-                r.face_sha256,
-                r.face_dhash,
-                "1" if r.is_duplicate else "0",
-                r.duplicate_reason or "",
-                r.duplicate_of_id or "",
-                r.created_at.isoformat(),
+                checkin.id,
+                checkin.template_hash,
+                attendee.display_name,
+                attendee.phone_last4 or "",
+                checkin.checked_in_at.isoformat(),
+                "" if checkin.lat is None else checkin.lat,
+                "" if checkin.lng is None else checkin.lng,
             ]
         )
     buffer.seek(0)
-    filename = f"event-{event.id}.csv"
+    filename = f"quorum-event-{event.id}-named.csv"
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",

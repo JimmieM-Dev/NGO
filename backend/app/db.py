@@ -47,15 +47,19 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     """Create all tables. Importing models registers them on Base.
 
-    Also performs a one-shot reset if an older schema (pre-face-capture) is detected on
-    disk. MVP-only: safe to wipe because we have no migration tool wired up yet.
+    Quorum's Phase 1 schema replaces the legacy ``registrations`` table with
+    ``attendees`` / ``invitees`` / ``checkins``. If we detect the old table on
+    disk we drop it (the MVP has no migration tool wired up yet and demo data
+    is intentionally non-precious).
     """
     from app import models  # noqa: F401
 
     inspector = inspect(engine)
-    if "registrations" in inspector.get_table_names():
-        cols = {c["name"] for c in inspector.get_columns("registrations")}
-        if "face_sha256" not in cols:
-            Base.metadata.drop_all(bind=engine)
+    existing = set(inspector.get_table_names())
+    if "registrations" in existing:
+        from sqlalchemy import text
+
+        with engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS registrations"))
 
     Base.metadata.create_all(bind=engine)

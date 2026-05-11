@@ -6,42 +6,52 @@ export type Event = {
   created_at: string;
 };
 
-export type Registration = {
+export type Invitee = {
   id: string;
   event_id: string;
-  full_name: string;
-  national_id: string;
-  phone: string;
-  face_sha256: string;
-  face_dhash: string;
-  face_image_b64: string | null;
-  is_duplicate: boolean;
-  duplicate_reason: string | null;
-  duplicate_of_id: string | null;
+  display_name: string;
+  phone_last4: string | null;
+  claimed_by_attendee_id: string | null;
   created_at: string;
 };
 
-export type DuplicateInfo = {
-  reason: string;
-  matched_registration_id: string;
-  matched_field: string;
+export type Checkin = {
+  id: string;
+  event_id: string;
+  template_hash: string;
+  checked_in_at: string;
+  lat: number | null;
+  lng: number | null;
 };
 
-export type RegistrationCreateResponse = {
-  registration: Registration;
-  duplicate: DuplicateInfo | null;
+export type CheckinResult = {
+  checkin: Checkin;
+  welcome_back: boolean;
+  attendee_known: boolean;
+};
+
+export type Lookup = {
+  template_hash: string;
+  attendee_known: boolean;
+  already_checked_in: boolean;
 };
 
 export type EventStats = {
   event_id: string;
-  total: number;
-  unique: number;
-  duplicates: number;
+  checked_in: number;
+  invitees_total: number;
+  invitees_claimed: number;
+  walkins: number;
 };
 
-export type RegistrationDraft = {
-  full_name: string;
-  national_id: string;
-  phone: string;
-  face_image_b64: string;
+export type CheckinFlow = 'returning' | 'invitee' | 'walkin';
+
+export type CheckinDraft = {
+  template_hash: string;
+  flow: CheckinFlow;
+  lat?: number | null;
+  lng?: number | null;
+  invitee_id?: string;
+  display_name?: string;
+  phone_last4?: string;
 };
