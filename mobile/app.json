@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "NGO Biometric Registration",
-    "slug": "ngo-biometric-registration",
+    "name": "Quorum",
+    "slug": "quorum",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Capture attendee fingerprints to prevent duplicate event registrations."
+        "NSCameraUsageDescription": "Capture attendee biometrics to prevent duplicate event check-ins."
       }
     },
     "android": {
@@ -35,7 +35,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access the camera to capture attendee fingerprints."
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access the camera to capture attendee biometrics."
         }
       ]
     ],

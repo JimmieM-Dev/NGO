@@ -1,8 +1,8 @@
-# NGO Biometric Mobile App
+# Quorum Mobile App
 
-Expo React Native (TypeScript) app for field operators. Lets a single device run a
-sensitization event: create the event, enroll attendees with a fingerprint photo +
-national ID + phone, and surface duplicate alerts immediately.
+Expo React Native (TypeScript) app for field operators running Quorum check-in.
+A single device runs an event: create the event, check attendees in with a
+biometric scan, and refuse duplicates on the spot.
 
 ## Install
 

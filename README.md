@@ -1,6 +1,14 @@
-# NGO Biometric Attendee Registration
+# Quorum
 
-A two-part system for reducing duplicate registrations at NGO sensitization events.
+**Verified attendance. Anonymous by design.**
+
+A two-part system for reducing duplicate registrations at NGO sensitization events
+and workshops, using a fingerprint template hash as a pseudonymous identifier so
+per-event records carry no personally identifiable information.
+
+> Phase 0 of the Quorum migration is in flight — the codebase still has the
+> older face-capture data model below. The schema is being replaced in Phase 1
+> with `attendees` / `invitees` / `checkins` per the migration plan.
 
 During an event a single operator uses a tablet/phone app to enroll attendees. Each
 attendee provides:

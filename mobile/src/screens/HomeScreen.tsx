@@ -89,8 +89,9 @@ export function HomeScreen({ navigation }: Props) {
             <View style={sharedStyles.card}>
               <Text style={sharedStyles.heading}>Start a new event</Text>
               <Text style={sharedStyles.subheading}>
-                Create a sensitization event, then register attendees with a face photo,
-                national ID, and phone to prevent duplicate sign-ups.
+                Verified attendance. Anonymous by design. Create an event, then check
+                attendees in with a biometric scan — no names on the operator&apos;s
+                screen unless someone is new.
               </Text>
               <View>
                 <Text style={sharedStyles.label}>Event name</Text>

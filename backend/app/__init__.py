@@ -1,1 +1,1 @@
-"""NGO biometric registration backend."""
+"""Quorum biometric attendance backend."""

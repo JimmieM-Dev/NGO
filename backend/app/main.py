@@ -18,11 +18,11 @@ async def lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="NGO Biometric Registration API",
+        title="Quorum API",
         version="0.1.0",
         description=(
-            "Backend for registering attendees at NGO sensitization events using face, "
-            "national ID, and phone number signals to prevent duplicate registrations."
+            "Verified attendance. Anonymous by design. Backend for biometric event "
+            "check-in where attendee identity is a pseudonymous template hash."
         ),
         lifespan=lifespan,
     )

@@ -1,7 +1,7 @@
 [project]
-name = "ngo-biometric-backend"
+name = "quorum-backend"
 version = "0.1.0"
-description = "Backend API for the NGO biometric attendee registration system"
+description = "Backend API for Quorum — verified, pseudonymous event attendance"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.115",

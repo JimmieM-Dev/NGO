@@ -2,11 +2,19 @@
 
 ## Goals
 
-1. During an NGO sensitization event, an operator uses a single device to enroll
-   attendees using fingerprint, national ID, and phone number.
-2. The system prevents a single person from registering multiple times using different
-   phone numbers.
-3. Organizers get transparent, auditable reports of unique attendance.
+1. During an event (NGO sensitization, workshop, training), an operator uses a single
+   device to check attendees in with a biometric scan.
+2. The system prevents a single person from being counted multiple times — same
+   fingerprint at the same event is refused at the door.
+3. Per-event records carry no personally identifiable information; identity is a
+   pseudonymous template hash.
+4. The same attendee at a later event is recognized automatically with no
+   name re-entry.
+5. Organizers get transparent, auditable reports of unique attendance.
+
+> The Phase 1 schema rewrite (attendees / invitees / checkins) supersedes the
+> face-capture data model described below; this doc will be updated when
+> Phase 1 lands.
 
 ## Components
 

@@ -1,7 +1,7 @@
-# NGO Biometric Backend
+# Quorum Backend
 
-FastAPI + SQLAlchemy + SQLite service that powers attendee registration and duplicate
-detection for the NGO biometric app.
+FastAPI + SQLAlchemy + SQLite service that powers attendee check-in and duplicate
+detection for Quorum.
 
 ## Install
 
@@ -20,7 +20,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - OpenAPI docs: <http://localhost:8000/docs>
 - Health check: <http://localhost:8000/health>
 
-`NGO_DATABASE_URL` overrides the default SQLite location (`sqlite:///./ngo.db`).
+`QUORUM_DATABASE_URL` (or legacy `NGO_DATABASE_URL`) overrides the default SQLite
+location (`sqlite:///./quorum.db`).
 
 ## Test
 

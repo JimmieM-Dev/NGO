@@ -14,7 +14,7 @@ def _isolated_db(
 ) -> Iterator[None]:
     """Give each test a fresh SQLite file and rebind the engine to it."""
     db_path = tmp_path_factory.mktemp("db") / "test.db"
-    monkeypatch.setenv("NGO_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("QUORUM_DATABASE_URL", f"sqlite:///{db_path}")
 
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -23,7 +23,7 @@ def _isolated_db(
     from app import models  # noqa: F401
 
     engine = create_engine(
-        os.environ["NGO_DATABASE_URL"],
+        os.environ["QUORUM_DATABASE_URL"],
         connect_args={"check_same_thread": False},
     )
     monkeypatch.setattr(db_module, "engine", engine)

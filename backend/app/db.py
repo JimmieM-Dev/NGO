@@ -12,10 +12,16 @@ def _default_database_url() -> str:
     # When running on Fly.io the deploy tool mounts a persistent volume at /data.
     if os.path.isdir("/data") and os.access("/data", os.W_OK):
         return "sqlite:////data/app.db"
-    return "sqlite:///./ngo.db"
+    return "sqlite:///./quorum.db"
 
 
-DATABASE_URL = os.environ.get("NGO_DATABASE_URL", _default_database_url())
+# QUORUM_DATABASE_URL is the canonical env var; the legacy NGO_DATABASE_URL is
+# still honored so older Fly secrets keep working until they're rotated.
+DATABASE_URL = (
+    os.environ.get("QUORUM_DATABASE_URL")
+    or os.environ.get("NGO_DATABASE_URL")
+    or _default_database_url()
+)
 
 engine = create_engine(
     DATABASE_URL,

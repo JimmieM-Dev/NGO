@@ -24,7 +24,7 @@ export default function App() {
             headerTitleStyle: { fontWeight: '700' },
           }}
         >
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'NGO Events' }} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Quorum' }} />
           <Stack.Screen name="EventDashboard" component={EventDashboardScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register attendee' }} />
           <Stack.Screen
