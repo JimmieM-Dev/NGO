@@ -40,7 +40,7 @@
       ]
     ],
     "extra": {
-      "apiBaseUrl": "https://ngo-biometric-backend-ksxakowm.fly.dev"
+      "apiBaseUrl": "https://quorum-backend.fly.dev"
     }
   }
 }
