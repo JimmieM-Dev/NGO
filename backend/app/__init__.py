@@ -1,0 +1,1 @@
+"""Quorum biometric attendance backend."""
